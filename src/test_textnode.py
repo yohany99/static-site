@@ -1,6 +1,6 @@
 import unittest
 
-from textnode import TextNode, TextType, text_node_to_html_node
+from textnode import TextNode, TextType, text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links
 
 
 class TestTextNode(unittest.TestCase):
@@ -51,6 +51,52 @@ class TestTextNode(unittest.TestCase):
             html_node.props,
             {"src": "https://www.boot.dev", "alt": "This is an image"},
         )
+    
+    def test_split_nodes_delimiter(self):
+        node = TextNode("This is text with a `code block` word", TextType.TEXT)
+        new_nodes = split_nodes_delimiter([node], "`", TextType.CODE)
+        self.assertEqual(
+            new_nodes,
+            [
+                TextNode("This is text with a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" word", TextType.TEXT)
+            ]
+        )
+
+    def test_multiple_split_nodes_delimiter(self):
+        node = TextNode("This is text with a `code block` word", TextType.TEXT)
+        node2 = TextNode("This is text with a **bolded phrase** in the middle", TextType.TEXT)
+        new_nodes = split_nodes_delimiter([node, node2], "`", TextType.CODE)
+        new_nodes = split_nodes_delimiter(new_nodes, "**", TextType.BOLD)
+        self.assertEqual(
+            new_nodes,
+            [
+                TextNode("This is text with a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" word", TextType.TEXT),
+                TextNode("This is text with a ", TextType.TEXT),
+                TextNode("bolded phrase", TextType.BOLD),
+                TextNode(" in the middle", TextType.TEXT)
+            ]
+        )
+    
+    def test_split_nodes_delimiter_error(self):
+        node = TextNode("This is a text with a `code block word", TextType.TEXT)
+        with self.assertRaises(Exception):
+            split_nodes_delimiter([node], "`", TextType.CODE)
+
+    def test_extract_markdown_images(self):
+        matches = extract_markdown_images(
+            "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png)"
+        )
+        self.assertListEqual([("image", "https://i.imgur.com/zjjcJKZ.png")], matches)
+    
+    def test_extract_markdown_links(self):
+        matches = extract_markdown_links(
+            "This is text with a link [to boot dev](https://www.boot.dev) and [to youtube](https://www.youtube.com/@bootdotdev)"
+        )
+        self.assertListEqual([("to boot dev", "https://www.boot.dev"), ("to youtube", "https://www.youtube.com/@bootdotdev")], matches)
 
 if __name__ == "__main__":
     unittest.main()
