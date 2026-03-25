@@ -14,7 +14,7 @@ def extract_title(markdown):
         raise ValueError("heading not found")
     return heading
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}.")
     with open(from_path) as f:
         from_markdown = f.read()
@@ -24,6 +24,8 @@ def generate_page(from_path, template_path, dest_path):
     title = extract_title(from_markdown)
     template_contents = template_contents.replace("{{ Title }}", title)
     template_contents = template_contents.replace("{{ Content }}", html_string)
+    template_contents = template_contents.replace('href="/', 'href="{basepath}')
+    template_contents = template_contents.replace('src="/', 'src="{basepath}')
     dest_dir_path = os.path.dirname(dest_path)
     if dest_dir_path != "":
         os.makedirs(dest_dir_path, exist_ok=True)
@@ -45,17 +47,10 @@ def copy_static(src, dst):
             os.mkdir(dst_path)
             copy_static(src_path, dst_path)
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath):
     for path in os.listdir(dir_path_content):
         full_path = os.path.join(dir_path_content, path)
         if os.path.isfile(full_path):
-            generate_page(full_path, template_path, Path(os.path.join(dest_dir_path, path)).with_suffix(".html"))
+            generate_page(full_path, template_path, Path(os.path.join(dest_dir_path, path)).with_suffix(".html"), basepath)
         else:
-            generate_pages_recursive(full_path, template_path, os.path.join(dest_dir_path, path))
-
-    '''
-    os.listdir(path): return a list of files inside the directory
-    os.path.join(path, /, path): join one or more paths
-    os.path.isfile(path): return true if is a file
-    pathlib.Path: the Path class
-    '''
+            generate_pages_recursive(full_path, template_path, os.path.join(dest_dir_path, path), basepath)
